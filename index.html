@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ouvido Musical</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+
+    <section id="tela-login" class="tela tela-login">
+      <h1>Ouvido Musical</h1>
+      <p class="instrucao">Entre para salvar seu progresso.</p>
+
+      <form id="form-login" class="auth-form">
+        <label class="campo-login">
+          <span>Usuário</span>
+          <input id="login-usuario" type="text" placeholder="Digite seu nome" autocomplete="username" required>
+        </label>
+
+        <label class="campo-login">
+          <span>Senha</span>
+          <input id="login-senha" type="password" placeholder="Digite sua senha" autocomplete="current-password" required>
+        </label>
+
+        <button type="submit" class="grande">Entrar</button>
+      </form>
+
+      <button id="botao-criar-conta" class="botao-secundario">Criar conta</button>
+      <p id="login-mensagem" class="login-mensagem" aria-live="polite"></p>
+    </section>
+
+    <!-- TELA 1: escolher o instrumento e o exercício -->
+    <section id="tela-inicio" class="tela tela-inicio" hidden>
+      <div class="topo-usuario">
+        <span id="usuario-logado" class="usuario-logado"></span>
+        <button id="botao-sair" class="botao-secundario pequeno">Sair</button>
+      </div>
+
+      <h1>Ouvido Musical</h1>
+      <p class="instrucao">Treine seu ouvido musical.</p>
+
+      <div class="progresso-geral-box">
+        <div class="progresso-geral-header">
+          <span>Progresso geral</span>
+          <strong id="pontos-gerais">0%</strong>
+        </div>
+        <div class="barra-geral" role="progressbar" aria-label="Progresso geral dos exercícios">
+          <div id="barra-geral" class="barra-geral-preenchida"></div>
+        </div>
+        <p id="texto-progresso-geral" class="texto-progresso-geral">0% concluído</p>
+      </div>
+
+      <h2 class="secao-titulo">1. Escolha o instrumento</h2>
+      <div id="instrumentos" class="instrumentos" role="group" aria-label="Instrumento"></div>
+      <p class="dica">Toque para ouvir uma amostra.</p>
+
+      <h2 class="secao-titulo">2. Escolha o exercício</h2>
+      <div id="cartoes" class="cartoes"></div>
+    </section>
+
+    <!-- TELA 2: prévia do exercício -->
+    <section id="tela-previa" class="tela tela-previa" hidden>
+      <header class="topo-exercicio">
+        <button id="voltar-previa" class="voltar" aria-label="Voltar ao início">← Voltar</button>
+        <div class="topo-info">
+          <strong id="titulo-previa"></strong>
+          <small id="etiqueta-previa"></small>
+        </div>
+      </header>
+
+      <p class="instrucao">Escute cada exemplo antes de começar o exercício.</p>
+
+      <div class="preview-card">
+        <p id="preview-nome" class="preview-nome"></p>
+        <p id="preview-descricao" class="preview-descricao">Exemplo do exercício</p>
+        <button id="preview-ouvir" class="grande">▶ Ouvir novamente</button>
+      </div>
+
+      <div class="preview-acoes">
+        <button id="preview-anterior" class="botao-secundario">← Anterior</button>
+        <button id="preview-proxima" class="botao-secundario">Próxima →</button>
+      </div>
+
+      <button id="preview-comecar" class="proxima">Começar o exercício</button>
+    </section>
+
+    <!-- TELA 3: a rodada de questões -->
+    <section id="tela-exercicio" class="tela" hidden>
+      <header class="topo-exercicio">
+        <button id="voltar" class="voltar" aria-label="Voltar ao início">← Voltar</button>
+        <div class="topo-info">
+          <strong id="titulo-exercicio"></strong>
+          <small id="etiqueta-instrumento"></small>
+        </div>
+      </header>
+
+      <div id="progresso" class="progresso" role="progressbar" aria-label="Progresso da rodada">
+        <div id="barra" class="progresso-preenchido"></div>
+      </div>
+      <p id="progresso-texto" class="progresso-texto"></p>
+
+      <p id="instrucao" class="instrucao"></p>
+
+      <section class="placar" aria-label="Pontuação da rodada">
+        <div><span id="acertos">0</span><small>Acertos</small></div>
+        <div><span id="erros">0</span><small>Erros</small></div>
+        <div><span id="sequencia">0</span><small>Sequência</small></div>
+        <div><span id="porcentagem">0%</span><small>Aproveit.</small></div>
+      </section>
+      <p id="recorde" class="recorde"></p>
+
+      <button id="tocar" class="grande">▶ Tocar</button>
+      <div id="opcoes" class="opcoes"></div>
+      <p id="mensagem" class="mensagem" aria-live="polite"></p>
+      <p id="detalhe" class="detalhe"></p>
+      <button id="proxima" class="proxima" hidden>Próxima</button>
+
+      <button id="zerar" class="zerar">Zerar histórico deste exercício</button>
+    </section>
+
+    <!-- TELA 3: resultado da rodada -->
+    <section id="tela-resultado" class="tela tela-resultado" hidden>
+      <p class="resultado-titulo">Rodada concluída!</p>
+      <p id="res-exercicio" class="instrucao"></p>
+
+      <p id="res-nota" class="resultado-nota"></p>
+      <p id="res-porcentagem" class="resultado-porcentagem"></p>
+      <p id="res-mensagem" class="resultado-mensagem"></p>
+      <p id="res-recorde" class="resultado-recorde"></p>
+
+      <section class="placar placar-resumo" aria-label="Resumo da rodada">
+        <div><span id="res-erros">0</span><small>Erros</small></div>
+        <div><span id="res-sequencia">0</span><small>Melhor sequência</small></div>
+      </section>
+
+      <button id="jogar-de-novo" class="grande">↻ Jogar de novo</button>
+      <button id="res-voltar" class="botao-secundario">Voltar ao início</button>
+    </section>
+
+  </main>
+
+  <script src="audio.js"></script>
+  <script src="exercicios.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

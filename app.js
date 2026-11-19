@@ -21,6 +21,7 @@ let respondido = false;
 let rodada = rodadaVazia();
 let usuarioAtual = null;
 let placares = {};
+let tokenSessao = "";
 let previaExercicio = [];
 let indicePrevia = 0;
 
@@ -126,63 +127,6 @@ function placarDoTom(exercicioId, tonica) {
   return p.tons[chave];
 }
 
-function carregarUsuarios() {
-  let usuarios = {};
-  try {
-    const texto = localStorage.getItem(CHAVE_USUARIOS);
-    if (texto) usuarios = JSON.parse(texto) || {};
-  } catch (e) {
-    usuarios = {};
-  }
-
-  const normalizados = {};
-  Object.keys(usuarios).forEach((chave) => {
-    const usuario = usuarios[chave];
-    const nome = String(usuario && (usuario.usuario || usuario.username || chave) || "").trim();
-    if (!nome) return;
-    normalizados[nome.toLowerCase()] = {
-      usuario: nome,
-      senha: String(usuario && (usuario.senha || usuario.password) || ""),
-      isAdmin: Boolean(usuario && usuario.isAdmin),
-      placares: usuario && usuario.placares ? usuario.placares : {},
-    };
-  });
-
-  if (!normalizados.adm) {
-    normalizados.adm = {
-      usuario: "adm",
-      senha: "adm123",
-      isAdmin: true,
-      placares: {},
-    };
-  }
-
-  if (normalizados.admin && !normalizados.adm) {
-    normalizados.adm = {
-      usuario: "adm",
-      senha: "adm123",
-      isAdmin: true,
-      placares: normalizados.admin.placares || {},
-    };
-  }
-
-  try {
-    localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(normalizados));
-  } catch (e) {
-    // Ignora falhas de armazenamento.
-  }
-
-  return normalizados;
-}
-
-function salvarUsuarios(usuarios) {
-  try {
-    localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(usuarios));
-  } catch (e) {
-    // Ignora falhas de armazenamento.
-  }
-}
-
 function carregarPlacares() {
   let salvo = {};
 
@@ -210,22 +154,15 @@ function carregarPlacares() {
 }
 
 function salvarPlacares() {
-  try {
-    if (usuarioAtual) {
-      const usuarios = carregarUsuarios();
-      const nome = usuarioAtual.usuario.toLowerCase();
-      usuarios[nome] = {
-        ...usuarioAtual,
-        placares: JSON.parse(JSON.stringify(placares)),
-      };
-      salvarUsuarios(usuarios);
-      localStorage.setItem(CHAVE_USUARIO_ATUAL, nome);
-      return;
-    }
-    localStorage.setItem(CHAVE, JSON.stringify(placares));
-  } catch (e) {
-    // Se o navegador não permitir salvar, o app continua funcionando.
-  }
+  if (!usuarioAtual) return;
+  fetch(`/api/users/${encodeURIComponent(usuarioAtual.usuario)}/scores`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${tokenSessao}`,
+    },
+    body: JSON.stringify({ placares }),
+  }).catch(() => mostrarMensagemLogin("Nao foi possivel salvar o progresso."));
 }
 
 function mostrarMensagemLogin(mensagem, tipo = "erro") {
@@ -234,61 +171,67 @@ function mostrarMensagemLogin(mensagem, tipo = "erro") {
   loginMensagem.style.color = tipo === "sucesso" ? "#a7f3d0" : "#ffd3d3";
 }
 
-function autenticarUsuario(nomeUsuario, senha) {
+async function autenticarUsuario(nomeUsuario, senha) {
   const nome = String(nomeUsuario || "").trim();
   if (!nome || !senha) {
     mostrarMensagemLogin("Preencha usuário e senha.");
     return false;
   }
-
-  const usuarios = carregarUsuarios();
-  const usuario = usuarios[nome.toLowerCase()];
-  if (!usuario || usuario.senha !== String(senha)) {
-    mostrarMensagemLogin("Usuário ou senha inválidos.");
+  try {
+    const resposta = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: nome, password: String(senha) }),
+    });
+    const dados = await resposta.json();
+    if (!resposta.ok) {
+      mostrarMensagemLogin(dados.error || "Usuário ou senha inválidos.");
+      return false;
+    }
+    usuarioAtual = {
+      usuario: dados.usuario,
+      isAdmin: Boolean(dados.isAdmin),
+      placares: dados.placares || {},
+    };
+    tokenSessao = dados.token;
+    placares = carregarPlacares();
+    localStorage.setItem(CHAVE_USUARIO_ATUAL, dados.usuario.toLowerCase());
+    atualizarProgressoGeral();
+    return true;
+  } catch (error) {
+    mostrarMensagemLogin("Nao foi possivel conectar ao servidor.");
     return false;
   }
-
-  usuarioAtual = {
-    usuario: usuario.usuario,
-    senha: usuario.senha,
-    isAdmin: Boolean(usuario.isAdmin),
-    placares: usuario.placares || {},
-  };
-
-  localStorage.setItem(CHAVE_USUARIO_ATUAL, nome.toLowerCase());
-  placares = carregarPlacares();
-  atualizarProgressoGeral();
-  mostrarMensagemLogin("Login realizado com sucesso!", "sucesso");
-  return true;
 }
 
-function criarContaUsuario(nomeUsuario, senha) {
+async function criarContaUsuario(nomeUsuario, senha) {
   const nome = String(nomeUsuario || "").trim();
   if (!nome || !senha) {
     mostrarMensagemLogin("Informe um usuário e uma senha.");
     return false;
   }
-
-  const usuarios = carregarUsuarios();
-  const chave = nome.toLowerCase();
-  if (usuarios[chave]) {
-    mostrarMensagemLogin("Esse usuário já existe. Tente outro nome.");
+  try {
+    const resposta = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: nome, password: String(senha) }),
+    });
+    const dados = await resposta.json();
+    if (!resposta.ok) {
+      mostrarMensagemLogin(dados.error || "Nao foi possivel criar a conta.");
+      return false;
+    }
+    mostrarMensagemLogin("Conta criada com sucesso! Faça login agora.", "sucesso");
+    return true;
+  } catch (error) {
+    mostrarMensagemLogin("Nao foi possivel conectar ao servidor.");
     return false;
   }
-
-  usuarios[chave] = {
-    usuario: nome,
-    senha: String(senha),
-    isAdmin: false,
-    placares: {},
-  };
-  salvarUsuarios(usuarios);
-  mostrarMensagemLogin("Conta criada com sucesso! Faça login agora.", "sucesso");
-  return true;
 }
 
 function sairDaConta() {
   usuarioAtual = null;
+  tokenSessao = "";
   localStorage.removeItem(CHAVE_USUARIO_ATUAL);
   placares = {};
   if (barraGeral) barraGeral.style.width = "0%";
@@ -993,18 +936,18 @@ function mostrarResultado() {
 
 // ---------- Botões ----------
 
-formLogin.addEventListener("submit", (evento) => {
+formLogin.addEventListener("submit", async (evento) => {
   evento.preventDefault();
   const nome = inputUsuario.value;
   const senha = inputSenha.value;
-  if (autenticarUsuario(nome, senha)) {
+  if (await autenticarUsuario(nome, senha)) {
     formLogin.reset();
     mostrarMensagemLogin("Login realizado com sucesso!", "sucesso");
     irParaInicio();
   }
 });
 
-botaoCriarConta.addEventListener("click", () => {
+botaoCriarConta.addEventListener("click", async () => {
   const nome = inputUsuario.value.trim();
   const senha = inputSenha.value;
   if (!nome || !senha) {
@@ -1012,7 +955,7 @@ botaoCriarConta.addEventListener("click", () => {
     return;
   }
 
-  if (criarContaUsuario(nome, senha)) {
+  if (await criarContaUsuario(nome, senha)) {
     formLogin.reset();
   }
 });
@@ -1072,18 +1015,6 @@ botaoZerar.addEventListener("click", () => {
 });
 
 // ---------- Início ----------
-
-const usuarios = carregarUsuarios();
-const usuarioSalvo = localStorage.getItem(CHAVE_USUARIO_ATUAL);
-if (usuarioSalvo && usuarios[usuarioSalvo]) {
-  usuarioAtual = {
-    usuario: usuarios[usuarioSalvo].usuario,
-    senha: usuarios[usuarioSalvo].senha,
-    isAdmin: Boolean(usuarios[usuarioSalvo].isAdmin),
-    placares: usuarios[usuarioSalvo].placares || {},
-  };
-  placares = carregarPlacares();
-}
 
 carregarInstrumento();
 criarSeletorInstrumento();
